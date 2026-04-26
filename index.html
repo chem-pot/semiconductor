@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>도체·부도체·반도체 시뮬레이션</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+  :root {
+    --blue:#2563eb; --blue-light:#dbeafe; --blue-mid:#93c5fd;
+    --green:#16a34a; --green-light:#dcfce7;
+    --red:#dc2626;   --red-light:#fee2e2;
+    --purple:#7c3aed; --purple-light:#ede9fe;
+    --orange:#ea580c;
+    --bg:#f0f4ff; --card:#ffffff; --border:#e2e8f0;
+    --text:#1e293b; --text-light:#64748b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:20px 12px;}
+  h1{text-align:center;font-size:1.4rem;font-weight:700;color:var(--blue);margin-bottom:4px;}
+  .subtitle{text-align:center;font-size:0.82rem;color:var(--text-light);margin-bottom:20px;}
+
+  .tabs{display:flex;justify-content:center;gap:6px;margin-bottom:20px;flex-wrap:wrap;}
+  .tab-btn{padding:7px 16px;border:2px solid var(--border);border-radius:999px;background:var(--card);
+    font-family:inherit;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all .2s;color:var(--text-light);}
+  .tab-btn:hover{border-color:var(--blue);color:var(--blue);}
+  .tab-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .card{background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:18px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.05);max-width:700px;margin:0 auto;}
+  .card h2{font-size:1rem;font-weight:700;margin-bottom:14px;color:var(--blue);}
+
+  canvas{display:block;width:100%;border-radius:12px;border:1.5px solid var(--border);}
+
+  .control-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:0.85rem;}
+  .control-row label{min-width:55px;color:var(--text-light);}
+  input[type=range]{flex:1;accent-color:var(--blue);}
+  .val-badge{background:var(--blue-light);color:var(--blue);font-weight:700;border-radius:6px;
+    padding:2px 8px;min-width:44px;text-align:center;}
+
+  .explain{background:var(--blue-light);border-left:4px solid var(--blue);border-radius:8px;
+    padding:11px 14px;font-size:0.84rem;line-height:1.75;color:var(--text);margin-top:12px;}
+  .explain.green{background:var(--green-light);border-color:var(--green);}
+  .explain.red{background:var(--red-light);border-color:var(--red);}
+  .explain.purple{background:var(--purple-light);border-color:var(--purple);}
+
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:0.8rem;align-items:center;}
+  .legend-item{display:flex;align-items:center;gap:5px;}
+  .ldot{width:13px;height:13px;border-radius:50%;flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<h1>⚡ 도체 · 부도체 · 반도체 시뮬레이션</h1>
+<p class="subtitle">통합과학 | 물질의 전기적 성질</p>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('conductor',this)">🔩 도체</button>
+  <button class="tab-btn" onclick="switchTab('insulator',this)">🚫 부도체</button>
+  <button class="tab-btn" onclick="switchTab('pure',this)">💎 순수 반도체</button>
+  <button class="tab-btn" onclick="switchTab('ntype',this)">🔵 n형 반도체</button>
+  <button class="tab-btn" onclick="switchTab('ptype',this)">🔴 p형 반도체</button>
+</div>
+
+<!-- 도체 -->
+<div id="panel-conductor" class="panel active">
+  <div class="card">
+    <h2>🔩 도체 — 자유 전자가 이동</h2>
+    <div class="control-row">
+      <label>전압</label>
+      <input type="range" id="v-con" min="0" max="10" value="5" step="1" oninput="onVoltage('con')">
+      <span class="val-badge" id="vv-con">5V</span>
+    </div>
+    <canvas id="c-conductor" height="260"></canvas>
+    <div class="legend" style="margin-top:8px;">
+      <div class="legend-item"><div class="ldot" style="background:#475569;border:2px solid #1e293b;"></div> 원자핵(+)</div>
+      <div class="legend-item"><div class="ldot" style="background:#3b82f6;border:2px solid #1d4ed8;"></div> 자유 전자(e⁻)</div>
+    </div>
+    <div class="explain">
+      도체에서는 원자가 전자들이 특정 원자에 속하지 않고 <strong>금속 전체를 자유롭게 돌아다닙니다.</strong><br>
+      전압을 걸면 자유 전자들이 일제히 한 방향으로 이동 → <strong>전류 발생</strong>
+    </div>
+  </div>
+</div>
+
+<!-- 부도체 -->
+<div id="panel-insulator" class="panel">
+  <div class="card">
+    <h2>🚫 부도체 — 전자가 원자에 속박</h2>
+    <div class="control-row">
+      <label>전압</label>
+      <input type="range" id="v-ins" min="0" max="10" value="5" step="1" oninput="onVoltage('ins')">
+      <span class="val-badge" id="vv-ins">5V</span>
+    </div>
+    <canvas id="c-insulator" height="260"></canvas>
+    <div class="legend" style="margin-top:8px;">
+      <div class="legend-item"><div class="ldot" style="background:#475569;border:2px solid #1e293b;"></div> 원자핵(+)</div>
+      <div class="legend-item"><div class="ldot" style="background:#f97316;border:2px solid #c2410c;"></div> 속박 전자(e⁻)</div>
+    </div>
+    <div class="explain red">
+      부도체에서는 전자가 각 원자핵에 <strong>강하게 붙잡혀 있어</strong> 이동할 수 없습니다.<br>
+      전압을 아무리 높여도 전류가 흐르지 않아 <strong>전구에 불이 켜지지 않습니다.</strong>
+    </div>
+  </div>
+</div>
+
+<!-- 순수 반도체 -->
+<div id="panel-pure" class="panel">
+  <div class="card">
+    <h2>💎 순수 반도체 — 규소(Si) 공유 결합</h2>
+    <canvas id="c-pure" height="320"></canvas>
+    <div class="legend" style="margin-top:8px;">
+      <div class="legend-item"><div class="ldot" style="background:#22c55e;border:2px solid #15803d;"></div> Si 원자 (원자가전자 4개)</div>
+      <div class="legend-item"><div class="ldot" style="background:#3b82f6;border:2px solid #1d4ed8;"></div> 공유 전자쌍</div>
+    </div>
+    <div class="explain green">
+      Si은 원자가 전자가 <strong>4개</strong>로, 이웃한 4개의 Si 원자와 각각 전자 1개씩을 공유 → <strong>공유 결합</strong><br>
+      모든 전자가 결합에 참여하므로 자유 전자가 거의 없어 <strong>전류가 잘 흐르지 않습니다.</strong>
+    </div>
+  </div>
+</div>
+
+<!-- n형 반도체 -->
+<div id="panel-ntype" class="panel">
+  <div class="card">
+    <h2>🔵 n형 반도체 — 인(P) 첨가</h2>
+    <canvas id="c-ntype" height="300"></canvas>
+    <div class="legend" style="margin-top:8px;">
+      <div class="legend-item"><div class="ldot" style="background:#22c55e;border:2px solid #15803d;"></div> Si (원자가전자 4개)</div>
+      <div class="legend-item"><div class="ldot" style="background:#ef4444;border:2px solid #b91c1c;"></div> P (원자가전자 5개)</div>
+      <div class="legend-item"><div class="ldot" style="background:#facc15;border:2px solid #ca8a04;"></div> 자유 전자(e⁻)</div>
+    </div>
+    <div class="explain" style="margin-bottom:16px;">
+      인(P)의 원자가 전자는 <strong>5개</strong>. 4개는 Si와 공유 결합에 쓰이고,<br>
+      남은 전자 <strong>1개가 자유 전자</strong>가 되어 격자 사이를 자유롭게 돌아다닙니다.<br>
+      <strong>전자(e⁻)가 다수 운반자</strong>인 반도체입니다.
+    </div>
+    <h2 style="margin-bottom:10px;">⚡ 전압을 걸면? — 전자 이동 애니메이션</h2>
+    <div class="control-row">
+      <label>전압</label>
+      <input type="range" id="v-ntype" min="0" max="10" value="5" step="1" oninput="onVoltageN()">
+      <span class="val-badge" id="vv-ntype">5V</span>
+    </div>
+    <canvas id="c-ntype-anim" height="180"></canvas>
+    <div class="explain">
+      P 원자 1개에서 나온 자유 전자 <strong>1개</strong>가 격자 사이를 이동합니다.<br>
+      전압을 걸면 <strong>−극 → +극 방향</strong>으로, 전압이 클수록 <strong>속도가 빨라집니다.</strong><br>
+      <span style="color:#dc2626;font-size:0.82rem;">※ 전자 개수는 불순물(P) 원자 수에 따라 결정되며, 전압과 무관합니다.</span>
+    </div>
+  </div>
+</div>
+
+<!-- p형 반도체 -->
+<div id="panel-ptype" class="panel">
+  <div class="card">
+    <h2>🔴 p형 반도체 — 붕소(B) 첨가</h2>
+    <canvas id="c-ptype" height="300"></canvas>
+    <div class="legend" style="margin-top:8px;">
+      <div class="legend-item"><div class="ldot" style="background:#22c55e;border:2px solid #15803d;"></div> Si (원자가전자 4개)</div>
+      <div class="legend-item"><div class="ldot" style="background:#8b5cf6;border:2px solid #6d28d9;"></div> B (원자가전자 3개)</div>
+      <div class="legend-item"><div class="ldot" style="background:#fff;border:2px solid #f97316;"></div> 양공 (hole, +)</div>
+    </div>
+    <div class="explain purple" style="margin-bottom:16px;">
+      붕소(B)의 원자가 전자는 <strong>3개</strong>. Si와 공유 결합 시 전자 1개가 부족해<br>
+      빈 자리인 <strong>양공(hole)</strong>이 생깁니다.<br>
+      이웃 전자가 양공을 채우면서 양공이 이동 → <strong>양공(h⁺)이 다수 운반자</strong>
+    </div>
+    <h2 style="margin-bottom:10px;">⚡ 전압을 걸면? — 양공 이동 애니메이션</h2>
+    <div class="control-row">
+      <label>전압</label>
+      <input type="range" id="v-ptype" min="0" max="10" value="5" step="1" oninput="onVoltageP()">
+      <span class="val-badge" id="vv-ptype">5V</span>
+    </div>
+    <canvas id="c-ptype-anim" height="220"></canvas>
+    <div class="explain purple">
+      전압을 걸면 이웃 전자가 양공 쪽으로 이동하고, 양공은 반대 방향(+극 → −극)으로 이동합니다.<br>
+      <strong>양공의 이동 방향 = 전류 방향</strong>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 전역 애니메이션 ──
+const animMap = {};
+function cancelAnim(id){ if(animMap[id]) cancelAnimationFrame(animMap[id]); }
+
+// ── 탭 전환 ──
+function switchTab(id, btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  btn.classList.add('active');
+  setTimeout(initAll, 40);
+}
+
+// ── 전압 핸들러 ──
+function onVoltage(key){
+  const v = parseInt(document.getElementById('v-'+key).value);
+  document.getElementById('vv-'+key).textContent = v+'V';
+  if(key==='con'){ conElectrons=[]; drawConductor(v); }
+  if(key==='ins') drawInsulator(v);
+}
+function onVoltageN(){
+  const v=parseInt(document.getElementById('v-ntype').value);
+  document.getElementById('vv-ntype').textContent=v+'V';
+  ntypeElectrons=[];
+  animNtype(v);
+}
+function onVoltageP(){
+  const v=parseInt(document.getElementById('v-ptype').value);
+  document.getElementById('vv-ptype').textContent=v+'V';
+  animPtype(v);
+}
+
+// ════════════════════════════════════════
+// n형 애니메이션 — 자유 전자 이동
+// ════════════════════════════════════════
+let ntypeElectrons=[];
+function animNtype(voltage){
+  cancelAnim('ntype');
+  const cv=document.getElementById('c-ntype-anim'); if(!cv)return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+
+  // Si 격자 원자핵 (단순 격자)
+  const cols=6, rows=3;
+  const padX=30, padY=28;
+  const sx=(W-padX*2)/(cols-1), sy=(H-padY*2)/(rows-1);
+  const nuclei=[];
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
+    nuclei.push({x:padX+c*sx, y:padY+r*sy,
+      label: (r===1&&c===2)?'P':'Si',
+      fill: (r===1&&c===2)?'#ef4444':'#22c55e',
+      bg:   (r===1&&c===2)?'#fee2e2':'#dcfce7',
+      str:  (r===1&&c===2)?'#b91c1c':'#15803d'});
+
+  // 자유 전자 초기화 — P 원자 1개 → 자유 전자 1개 고정
+  // (실제로는 P 원자 수만큼이지만 격자 1개 표현이므로 1개로 고정)
+  if(!ntypeElectrons.length){
+    ntypeElectrons.push({
+      x: padX + (W-padX*2)*0.3,
+      y: padY + (H-padY*2)*0.5,
+      vx: voltage>0 ? (0.4 + voltage*0.08) : (Math.random()<.5?0.3:-0.3),
+      vy: (Math.random()-0.5)*0.5,
+      trail:[]
+    });
+  }
+
+  function loop(){
+    ctx.clearRect(0,0,W,H);
+    // 배경
+    ctx.fillStyle='#eff6ff';
+    roundRect(ctx,2,2,W-4,H-4,12); ctx.fill();
+
+    // 극 표시
+    const POLE_W=18;
+    ctx.fillStyle='#1d4ed8'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('−', POLE_W/2+2, H/2+5);
+    ctx.fillStyle='#dc2626';
+    ctx.fillText('+', W-POLE_W/2-2, H/2+5);
+
+    // 전압 0 안내
+    if(voltage===0){
+      ctx.fillStyle='#64748b'; ctx.font='13px Noto Sans KR,sans-serif'; ctx.textAlign='center';
+      ctx.fillText('전압 0 — 전자가 무작위로 이동합니다', W/2, H-8);
+    } else {
+      ctx.fillStyle='#16a34a'; ctx.font='bold 12px Noto Sans KR,sans-serif'; ctx.textAlign='center';
+      ctx.fillText('전류 흐름 ✓  (전자: − → +)', W/2, H-8);
+    }
+
+    // 격자 결합선
+    for(let r=0;r<rows;r++) for(let c=0;c<cols-1;c++){
+      const a=nuclei[r*cols+c], b=nuclei[r*cols+c+1];
+      ctx.strokeStyle='#bfdbfe'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    }
+    for(let r=0;r<rows-1;r++) for(let c=0;c<cols;c++){
+      const a=nuclei[r*cols+c], b=nuclei[(r+1)*cols+c];
+      ctx.strokeStyle='#bfdbfe'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    }
+
+    // 원자
+    nuclei.forEach(n=>{
+      ctx.beginPath(); ctx.arc(n.x,n.y,9,0,Math.PI*2);
+      ctx.fillStyle=n.bg; ctx.fill();
+      ctx.strokeStyle=n.str; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle=n.fill; ctx.font='bold 7px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(n.label,n.x,n.y+2.5);
+    });
+
+    // 전자 이동 — 전압이 클수록 빠르게, 방향은 오른쪽(−→+) 고정
+    ntypeElectrons.forEach(e=>{
+      if(voltage>0){
+        // 전압에 비례해 속도 증가, 방향은 항상 오른쪽
+        e.vx = 0.4 + voltage*0.09;
+        e.x += e.vx + (Math.random()-0.5)*0.2;
+      } else {
+        // 전압 0: 무작위 방향으로 천천히
+        e.x += e.vx + (Math.random()-0.5)*0.5;
+        if(e.x<POLE_W || e.x>W-POLE_W) e.vx*=-1;
+      }
+      e.y += e.vy + (Math.random()-0.5)*0.3;
+      if(e.x>W+8) e.x=POLE_W;
+      if(e.y<padY-5) e.vy=Math.abs(e.vy);
+      if(e.y>H-padY+5) e.vy=-Math.abs(e.vy);
+
+      // 궤적
+      e.trail.push({x:e.x,y:e.y});
+      if(e.trail.length>12) e.trail.shift();
+      e.trail.forEach((pt,i)=>{
+        ctx.beginPath(); ctx.arc(pt.x,pt.y,2,0,Math.PI*2);
+        ctx.fillStyle=`rgba(250,204,21,${i/e.trail.length*0.35})`; ctx.fill();
+      });
+
+      // 전자 원
+      const g=ctx.createRadialGradient(e.x-2,e.y-2,1,e.x,e.y,8);
+      g.addColorStop(0,'#fef08a'); g.addColorStop(1,'#ca8a04');
+      ctx.beginPath(); ctx.arc(e.x,e.y,8,0,Math.PI*2);
+      ctx.fillStyle=g; ctx.fill();
+      ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.2; ctx.stroke();
+      ctx.fillStyle='#1e293b'; ctx.font='bold 7px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('e⁻',e.x,e.y+2.5);
+    });
+
+    animMap['ntype']=requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// ════════════════════════════════════════
+// p형 애니메이션 — 양공 이동 (격자 기반 hop)
+// ════════════════════════════════════════
+let ptypeState={holeCol:0, hopT:0, voltage:5};
+function animPtype(voltage){
+  cancelAnim('ptype');
+  ptypeState.voltage=voltage;
+  const cv=document.getElementById('c-ptype-anim'); if(!cv)return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+
+  // 격자: 4열 3행
+  const cols=6, rows=3;
+  const padX=30, padY=35;
+  const sx=(W-padX*2)/(cols-1), sy=(H-padY*2)/(rows-1);
+
+  // 양공 시작 위치 (행1, 열0)
+  if(ptypeState.holeCol===undefined) ptypeState.holeCol=0;
+  let holeRow=1, holeCol=ptypeState.holeCol;
+  let hopT=ptypeState.hopT||0; // 0~1 hop 진행도
+  let hopping=false;
+
+  const ATOM_R=10;
+  const speed = voltage===0 ? 0 : 0.008 + voltage*0.006;
+
+  function loop(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#faf5ff';
+    roundRect(ctx,2,2,W-4,H-4,12); ctx.fill();
+
+    // 극 표시
+    ctx.fillStyle='#1d4ed8'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('−', 10, H/2+5);
+    ctx.fillStyle='#dc2626';
+    ctx.fillText('+', W-10, H/2+5);
+
+    if(voltage===0){
+      ctx.fillStyle='#64748b'; ctx.font='13px Noto Sans KR,sans-serif'; ctx.textAlign='center';
+      ctx.fillText('전압 0 — 양공이 이동하지 않습니다', W/2, H-8);
+    } else {
+      ctx.fillStyle='#7c3aed'; ctx.font='bold 12px Noto Sans KR,sans-serif'; ctx.textAlign='center';
+      ctx.fillText('전류 흐름 ✓  (양공: + → −)', W/2, H-8);
+    }
+
+    // 양공 현재/다음 위치 계산
+    const curX=padX+holeCol*sx, curY=padY+holeRow*sy;
+    const nextCol=holeCol+1; // 끝에 도달하면 wrap 없이 왼쪽 끝에서 새로 등장
+    const nextX= nextCol<cols ? padX+nextCol*sx : padX+cols*sx;
+    const nextY=curY;
+
+    // hop 진행 (양공은 +극→−극 = 오른쪽으로 한 칸씩)
+    if(voltage>0){
+      hopT+=speed;
+      if(hopT>=1){
+        hopT=0;
+        if(holeCol+1>=cols){
+          // 오른쪽 끝 도달 → 왼쪽 끝 열 0에서 새로 시작 (전극에서 새 양공 공급)
+          holeCol=0;
+        } else {
+          holeCol=nextCol;
+        }
+        ptypeState.holeCol=holeCol;
+      }
+    }
+    ptypeState.hopT=hopT;
+
+    // 결합선
+    for(let r=0;r<rows;r++) for(let c=0;c<cols-1;c++){
+      const ax=padX+c*sx, ay=padY+r*sy, bx=padX+(c+1)*sx, by=ay;
+      ctx.strokeStyle='#d8b4fe'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+    }
+    for(let r=0;r<rows-1;r++) for(let c=0;c<cols;c++){
+      const ax=padX+c*sx, ay=padY+r*sy, bx=ax, by=padY+(r+1)*sy;
+      ctx.strokeStyle='#d8b4fe'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+    }
+
+    // hop 중이면 전자가 오른쪽→왼쪽(양공 쪽)으로 이동하는 것을 표시
+    // (이웃 전자가 양공을 채우러 이동 = 전자는 양공 반대 방향)
+    if(voltage>0 && hopT>0 && nextCol<cols){
+      const ex_s=nextX, ey_s=nextY;
+      const ex_e=curX, ey_e=curY;
+      const px=ex_s+(ex_e-ex_s)*hopT;
+      const py=ey_s+(ey_e-ey_s)*hopT;
+      ctx.beginPath(); ctx.arc(px,py,6,0,Math.PI*2);
+      ctx.fillStyle=`rgba(59,130,246,${0.5+hopT*0.5})`; ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font='bold 6px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('e⁻',px,py+2);
+    }
+
+    // 원자 그리기
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        const ax=padX+c*sx, ay=padY+r*sy;
+        const isHole=(r===holeRow && c===holeCol);
+        const isNext=(voltage>0 && r===holeRow && c===nextCol && hopT>0.1);
+
+        // 양공 자리: 점선 원
+        if(isHole){
+          ctx.beginPath(); ctx.arc(ax,ay,ATOM_R+3,0,Math.PI*2);
+          ctx.setLineDash([3,3]);
+          ctx.strokeStyle='#f97316'; ctx.lineWidth=2; ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.beginPath(); ctx.arc(ax,ay,ATOM_R+3,0,Math.PI*2);
+          ctx.fillStyle='rgba(255,237,213,0.6)'; ctx.fill();
+          ctx.fillStyle='#c2410c'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
+          ctx.fillText('+',ax,ay+4);
+          // 양공 레이블
+          ctx.fillStyle='#ea580c'; ctx.font='bold 9px Noto Sans KR,sans-serif';
+          ctx.fillText('양공',ax,ay-ATOM_R-7);
+          continue;
+        }
+
+        ctx.beginPath(); ctx.arc(ax,ay,ATOM_R,0,Math.PI*2);
+        ctx.fillStyle='#ede9fe'; ctx.fill();
+        ctx.strokeStyle='#7c3aed'; ctx.lineWidth=1.5; ctx.stroke();
+        ctx.fillStyle='#5b21b6'; ctx.font='bold 7px sans-serif'; ctx.textAlign='center';
+        ctx.fillText('Si',ax,ay+2.5);
+      }
+    }
+
+    // 양공 이동 방향 화살표 (전압>0)
+    if(voltage>0){
+      const arY=H-22;
+      ctx.strokeStyle='#f97316'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(padX,arY); ctx.lineTo(W-padX,arY); ctx.stroke();
+      // 화살촉
+      ctx.fillStyle='#f97316';
+      ctx.beginPath(); ctx.moveTo(W-padX,arY); ctx.lineTo(W-padX-8,arY-4); ctx.lineTo(W-padX-8,arY+4); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#ea580c'; ctx.font='11px Noto Sans KR,sans-serif'; ctx.textAlign='center';
+      ctx.fillText('양공 이동 →', W/2, arY-4);
+    }
+
+    animMap['ptype']=requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+
+// ════════════════════════════════════════
+// 도체 — 원자핵 격자 + 자유 전자
+// ════════════════════════════════════════
+let conElectrons=[];
+function drawConductor(voltage){
+  cancelAnim('con');
+  const cv=document.getElementById('c-conductor'); if(!cv)return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+
+  // 원자핵 격자
+  const cols=5, rows=4;
+  const padX=50, padY=45;
+  const sx=(W-padX*2)/(cols-1), sy=(H-padY*2)/(rows-1);
+  const nuclei=[];
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
+    nuclei.push({x:padX+c*sx, y:padY+r*sy});
+
+  // 자유 전자 초기화 — 개수는 전압과 무관하게 고정
+  if(!conElectrons.length){
+    conElectrons=[];
+    const n=8;
+    for(let i=0;i<n;i++){
+      conElectrons.push({
+        x:Math.random()*W, y:Math.random()*H,
+        vx: voltage>0 ? (Math.random()*0.4+0.3) : (Math.random()*0.6+0.2)*(Math.random()<.5?1:-1),
+        vy:(Math.random()-0.5)*0.8
+      });
+    }
+  }
+
+  function loop(){
+    ctx.clearRect(0,0,W,H);
+
+    // 배경
+    ctx.fillStyle='#eff6ff';
+    roundRect(ctx,4,4,W-8,H-8,14); ctx.fill();
+
+    // 상태 표시
+    ctx.font='bold 13px Noto Sans KR,sans-serif';
+    ctx.textAlign='left';
+    ctx.fillStyle= voltage>0 ? '#16a34a':'#64748b';
+    ctx.fillText(voltage>0?'전류 흐름 ✓':'전압 0 — 전자 무작위 이동', 12, 22);
+
+    // 전류 화살표
+    if(voltage>0){
+      const arrowY=H-16;
+      ctx.strokeStyle='#16a34a'; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(20,arrowY); ctx.lineTo(W-20,arrowY); ctx.stroke();
+      ctx.fillStyle='#16a34a';
+      arrow(ctx,W-20,arrowY,true);
+      ctx.font='12px Noto Sans KR,sans-serif';
+      ctx.fillText('전자 이동 방향 (−극 → +극)',30,arrowY-6);
+    }
+
+    // 원자핵
+    nuclei.forEach(n=>{
+      ctx.beginPath(); ctx.arc(n.x,n.y,13,0,Math.PI*2);
+      ctx.fillStyle='#cbd5e1'; ctx.fill();
+      ctx.strokeStyle='#475569'; ctx.lineWidth=2; ctx.stroke();
+      ctx.fillStyle='#1e293b'; ctx.font='bold 10px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('+',n.x,n.y+4);
+    });
+
+    // 자유 전자 이동 — 전압>0 이면 항상 오른쪽(+극 방향)으로 drift
+    conElectrons.forEach(e=>{
+      if(voltage>0){
+        // 전압을 걸면 vx를 양수(오른쪽)로 강제, 속도는 전압에 비례
+        e.vx = Math.abs(e.vx) * (0.4 + voltage*0.06);
+      }
+      const drift = voltage>0 ? voltage*0.15 : 0;
+      e.x += e.vx + drift;
+      e.y += e.vy;
+      if(e.x<0) e.x=W; if(e.x>W) e.x=0;
+      if(e.y<6) e.vy=Math.abs(e.vy);
+      if(e.y>H-6) e.vy=-Math.abs(e.vy);
+
+      const g=ctx.createRadialGradient(e.x-2,e.y-2,1,e.x,e.y,8);
+      g.addColorStop(0,'#93c5fd'); g.addColorStop(1,'#2563eb');
+      ctx.beginPath(); ctx.arc(e.x,e.y,8,0,Math.PI*2);
+      ctx.fillStyle=g; ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font='bold 8px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('e⁻',e.x,e.y+3);
+    });
+
+    animMap['con']=requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// ════════════════════════════════════════
+// 부도체 — 원자핵 격자 + 속박 전자 (원 궤도)
+// ════════════════════════════════════════
+let insT=0;
+function drawInsulator(voltage){
+  cancelAnim('ins');
+  const cv=document.getElementById('c-insulator'); if(!cv)return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+
+  const cols=4, rows=3;
+  const padX=60, padY=55;
+  const sx=(W-padX*2)/(cols-1), sy=(H-padY*2)/(rows-1);
+  const nuclei=[];
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
+    nuclei.push({x:padX+c*sx, y:padY+r*sy, phase:Math.random()*Math.PI*2});
+
+  function loop(){
+    insT+=0.03;
+    ctx.clearRect(0,0,W,H);
+
+    ctx.fillStyle='#f9fafb';
+    roundRect(ctx,4,4,W-8,H-8,14); ctx.fill();
+
+    ctx.font='bold 13px Noto Sans KR,sans-serif';
+    ctx.textAlign='left';
+    ctx.fillStyle='#dc2626';
+    ctx.fillText('전류 없음 ✗', 12, 22);
+
+    if(voltage>0){
+      ctx.fillStyle='#dc2626'; ctx.font='12px Noto Sans KR,sans-serif';
+      ctx.fillText('전압을 가해도 전자가 이동하지 못합니다', 12, H-12);
+    }
+
+    nuclei.forEach(n=>{
+      // 궤도 원
+      ctx.beginPath(); ctx.arc(n.x,n.y,22,0,Math.PI*2);
+      ctx.strokeStyle='#fed7aa'; ctx.lineWidth=1.2; ctx.stroke();
+
+      // 원자핵
+      ctx.beginPath(); ctx.arc(n.x,n.y,13,0,Math.PI*2);
+      ctx.fillStyle='#e2e8f0'; ctx.fill();
+      ctx.strokeStyle='#475569'; ctx.lineWidth=2; ctx.stroke();
+      ctx.fillStyle='#1e293b'; ctx.font='bold 10px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('+',n.x,n.y+4);
+
+      // 속박 전자 2개 궤도
+      for(let i=0;i<2;i++){
+        const angle=insT*0.6 + n.phase + i*Math.PI;
+        const ex=n.x+Math.cos(angle)*22;
+        const ey=n.y+Math.sin(angle)*22;
+        ctx.beginPath(); ctx.arc(ex,ey,6,0,Math.PI*2);
+        ctx.fillStyle='#f97316'; ctx.fill();
+        ctx.strokeStyle='#c2410c'; ctx.lineWidth=1.2; ctx.stroke();
+        ctx.fillStyle='#fff'; ctx.font='bold 7px sans-serif'; ctx.textAlign='center';
+        ctx.fillText('e⁻',ex,ey+2.5);
+      }
+    });
+
+    animMap['ins']=requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// ════════════════════════════════════════
+// 공유 결합 격자 (순수 반도체 / n형 / p형)
+// ════════════════════════════════════════
+function drawLattice(canvasId, type){
+  const cv=document.getElementById(canvasId); if(!cv)return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+
+  // 배경
+  ctx.fillStyle='#f0fdf4';
+  if(type==='ntype') ctx.fillStyle='#eff6ff';
+  if(type==='ptype') ctx.fillStyle='#faf5ff';
+  roundRect(ctx,4,4,W-8,H-8,14); ctx.fill();
+
+  const cols=3, rows=3;
+  const padX=80, padY=70;
+  const sx=(W-padX*2)/(cols-1), sy=(H-padY*2)/(rows-1);
+
+  // 원자 위치
+  const atoms=[];
+  for(let r=0;r<rows;r++)
+    for(let c=0;c<cols;c++)
+      atoms.push({r,c,x:padX+c*sx,y:padY+r*sy});
+
+  // 중앙이 불순물
+  const specialIdx=4; // 3x3 중앙
+  const ATOM_R=22;
+
+  // ── 결합선 + 공유 전자 먼저 ──
+  // 가로 결합
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols-1;c++){
+      const a=atoms[r*cols+c], b=atoms[r*cols+c+1];
+      drawBond(ctx,a.x,a.y,b.x,b.y,ATOM_R);
+    }
+  }
+  // 세로 결합
+  for(let r=0;r<rows-1;r++){
+    for(let c=0;c<cols;c++){
+      const a=atoms[r*cols+c], b=atoms[(r+1)*cols+c];
+      drawBond(ctx,a.x,a.y,b.x,b.y,ATOM_R);
+    }
+  }
+
+  // ── 원자 ──
+  atoms.forEach((a,i)=>{
+    const isSpecial=(i===specialIdx);
+    if(isSpecial && type==='ntype'){
+      drawAtomCircle(ctx,a.x,a.y,ATOM_R,'P','#ef4444','#fee2e2','#b91c1c',5);
+    } else if(isSpecial && type==='ptype'){
+      drawAtomCircle(ctx,a.x,a.y,ATOM_R,'B','#8b5cf6','#ede9fe','#6d28d9',3);
+    } else {
+      drawAtomCircle(ctx,a.x,a.y,ATOM_R,'Si','#22c55e','#dcfce7','#15803d',4);
+    }
+  });
+
+  // ── n형: 자유 전자 ──
+  if(type==='ntype'){
+    const sp=atoms[specialIdx];
+    const fx=sp.x+38, fy=sp.y-30;
+    ctx.beginPath(); ctx.arc(fx,fy,9,0,Math.PI*2);
+    ctx.fillStyle='#facc15'; ctx.fill();
+    ctx.strokeStyle='#ca8a04'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#1e293b'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('e⁻',fx,fy+3);
+    // 화살표
+    ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(sp.x+22,sp.y-20); ctx.lineTo(fx-10,fy+2); ctx.stroke();
+
+    ctx.fillStyle='#1d4ed8'; ctx.font='bold 11px Noto Sans KR,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('남은 전자 1개 → 자유 전자',W/2,H-12);
+  }
+
+  // ── p형: 양공 ──
+  if(type==='ptype'){
+    const sp=atoms[specialIdx];
+    const hx=sp.x+38, hy=sp.y-30;
+    ctx.beginPath(); ctx.arc(hx,hy,9,0,Math.PI*2);
+    ctx.fillStyle='#fff'; ctx.fill();
+    ctx.strokeStyle='#f97316'; ctx.lineWidth=2.5; ctx.stroke();
+    ctx.fillStyle='#c2410c'; ctx.font='bold 10px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('+',hx,hy+4);
+    ctx.strokeStyle='#f97316'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(sp.x+22,sp.y-16); ctx.lineTo(hx-10,hy+4); ctx.stroke();
+
+    ctx.fillStyle='#6d28d9'; ctx.font='bold 11px Noto Sans KR,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('전자 부족 → 양공(hole) 형성',W/2,H-12);
+  }
+
+  if(type==='pure'){
+    ctx.fillStyle='#15803d'; ctx.font='bold 11px Noto Sans KR,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('4개의 원자가 전자 → 4방향 공유 결합',W/2,H-12);
+  }
+}
+
+// 결합 그리기 (원자 반지름 제외한 구간, 선만)
+function drawBond(ctx,x1,y1,x2,y2,r){
+  const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+  const ux=dx/len, uy=dy/len;
+  const nx=-uy*4, ny=ux*4;
+  const sx=x1+ux*r, sy=y1+uy*r;
+  const ex=x2-ux*r, ey=y2-uy*r;
+
+  // 두 줄 결합선만
+  for(let s of[-1,1]){
+    ctx.beginPath();
+    ctx.moveTo(sx+nx*s,sy+ny*s);
+    ctx.lineTo(ex+nx*s,ey+ny*s);
+    ctx.strokeStyle='#93c5fd'; ctx.lineWidth=2; ctx.stroke();
+  }
+}
+
+// 원자 그리기 (원자가전자 개수 표시)
+function drawAtomCircle(ctx,x,y,r,label,fill,bg,stroke,valence){
+  // 원
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle=bg; ctx.fill();
+  ctx.strokeStyle=stroke; ctx.lineWidth=2.5; ctx.stroke();
+
+  // 원자 기호
+  ctx.fillStyle=fill; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(label,x,y+5);
+
+  // 원자가 전자 작은 점들 (원 바깥쪽 4방향)
+  // 4방향: 상,하,좌,우 / n형 P는 5개(4방향+여분1)
+  const dirs=[];
+  if(valence>=1) dirs.push([0,-1]);   // 상
+  if(valence>=2) dirs.push([1,0]);    // 우
+  if(valence>=3) dirs.push([0,1]);    // 하
+  if(valence>=4) dirs.push([-1,0]);   // 좌
+
+  const dotR=r+11;
+  dirs.forEach(([dx,dy])=>{
+    const px=x+dx*dotR, py=y+dy*dotR;
+    ctx.beginPath(); ctx.arc(px,py,3.5,0,Math.PI*2);
+    ctx.fillStyle=fill; ctx.fill();
+    ctx.strokeStyle=stroke; ctx.lineWidth=1; ctx.stroke();
+  });
+}
+
+// ── 유틸 ──
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
+}
+function arrow(ctx,x,y,right){
+  const d=right?-1:1;
+  ctx.beginPath(); ctx.moveTo(x,y);
+  ctx.lineTo(x+d*10,y-5); ctx.lineTo(x+d*10,y+5);
+  ctx.closePath(); ctx.fill();
+}
+
+// ── 캔버스 실제 크기 설정 ──
+function setCanvasSize(id){
+  const cv=document.getElementById(id); if(!cv)return;
+  const w=cv.offsetWidth||cv.parentElement.offsetWidth||600;
+  cv.width=w; // height는 HTML attribute 유지
+}
+
+function initAll(){
+  ['c-conductor','c-insulator','c-pure','c-ntype','c-ntype-anim','c-ptype','c-ptype-anim'].forEach(setCanvasSize);
+  const vc=parseInt(document.getElementById('v-con')?.value||5);
+  const vi=parseInt(document.getElementById('v-ins')?.value||5);
+  const vn=parseInt(document.getElementById('v-ntype')?.value||5);
+  const vp=parseInt(document.getElementById('v-ptype')?.value||5);
+  drawConductor(vc);
+  drawInsulator(vi);
+  drawLattice('c-pure','pure');
+  drawLattice('c-ntype','ntype');
+  drawLattice('c-ptype','ptype');
+  ntypeElectrons=[];
+  animNtype(vn);
+  animPtype(vp);
+}
+
+window.addEventListener('load',()=>{setTimeout(initAll,60);});
+window.addEventListener('resize',()=>{conElectrons=[];initAll();});
+</script>
+</body>
+</html>
