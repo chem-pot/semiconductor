@@ -176,7 +176,8 @@
     </div>
     <canvas id="c-ptype-anim" height="220"></canvas>
     <div class="explain purple">
-      전압을 걸면 이웃 전자가 양공 쪽으로 이동하고, 양공은 반대 방향(+극 → −극)으로 이동합니다.<br>
+      전압을 걸면 이웃 전자가 양공 쪽(−극→+극)으로 이동하고,<br>
+      양공은 반대 방향 <strong>(+극 → −극)</strong>으로 이동합니다.<br>
       <strong>양공의 이동 방향 = 전류 방향</strong>
     </div>
   </div>
@@ -361,33 +362,35 @@ function animPtype(voltage){
     ctx.fillStyle='#faf5ff';
     roundRect(ctx,2,2,W-4,H-4,12); ctx.fill();
 
-    // 극 표시
-    ctx.fillStyle='#1d4ed8'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
-    ctx.fillText('−', 10, H/2+5);
-    ctx.fillStyle='#dc2626';
-    ctx.fillText('+', W-10, H/2+5);
+    // 극 표시 — 왼쪽 +극, 오른쪽 -극
+    ctx.fillStyle='#dc2626'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('+', 10, H/2+5);
+    ctx.fillStyle='#1d4ed8';
+    ctx.fillText('−', W-10, H/2+5);
 
     if(voltage===0){
       ctx.fillStyle='#64748b'; ctx.font='13px Noto Sans KR,sans-serif'; ctx.textAlign='center';
       ctx.fillText('전압 0 — 양공이 이동하지 않습니다', W/2, H-8);
     } else {
       ctx.fillStyle='#7c3aed'; ctx.font='bold 12px Noto Sans KR,sans-serif'; ctx.textAlign='center';
-      ctx.fillText('전류 흐름 ✓  (양공: + → −)', W/2, H-8);
+      ctx.fillText('전류 흐름 ✓  (양공: +극→−극, 전자: −극→+극)', W/2, H-8);
     }
 
     // 양공 현재/다음 위치 계산
+    // 양공은 +극(왼쪽)→−극(오른쪽) 방향 = 열 번호 증가 방향
+    // 전자는 반대(오른쪽→왼쪽)로 이동하며 양공을 채움
     const curX=padX+holeCol*sx, curY=padY+holeRow*sy;
-    const nextCol=holeCol+1; // 끝에 도달하면 wrap 없이 왼쪽 끝에서 새로 등장
-    const nextX= nextCol<cols ? padX+nextCol*sx : padX+cols*sx;
+    const nextCol=holeCol+1; // 양공이 이동할 다음 열 (오른쪽)
+    const nextX= nextCol<cols ? padX+nextCol*sx : W;
     const nextY=curY;
 
-    // hop 진행 (양공은 +극→−극 = 오른쪽으로 한 칸씩)
+    // hop 진행 (양공: +극→−극 = 왼→오)
     if(voltage>0){
       hopT+=speed;
       if(hopT>=1){
         hopT=0;
         if(holeCol+1>=cols){
-          // 오른쪽 끝 도달 → 왼쪽 끝 열 0에서 새로 시작 (전극에서 새 양공 공급)
+          // 오른쪽 끝 도달 → 왼쪽 끝(+극쪽)에서 새 양공 공급
           holeCol=0;
         } else {
           holeCol=nextCol;
@@ -409,60 +412,65 @@ function animPtype(voltage){
       ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
     }
 
-    // hop 중이면 전자가 오른쪽→왼쪽(양공 쪽)으로 이동하는 것을 표시
-    // (이웃 전자가 양공을 채우러 이동 = 전자는 양공 반대 방향)
+    // hop 중: 전자가 양공 오른쪽(nextCol)에서 현재 양공 위치(curX)로 이동
+    // 전자 이동방향 = 오른쪽→왼쪽 (−극→+극 반대), 양공은 왼→오
     if(voltage>0 && hopT>0 && nextCol<cols){
-      const ex_s=nextX, ey_s=nextY;
-      const ex_e=curX, ey_e=curY;
+      const ex_s=nextX, ey_s=nextY;  // 전자 출발: 오른쪽 칸
+      const ex_e=curX, ey_e=curY;    // 전자 도착: 현재 양공 자리
       const px=ex_s+(ex_e-ex_s)*hopT;
       const py=ey_s+(ey_e-ey_s)*hopT;
       ctx.beginPath(); ctx.arc(px,py,6,0,Math.PI*2);
       ctx.fillStyle=`rgba(59,130,246,${0.5+hopT*0.5})`; ctx.fill();
-      ctx.fillStyle='#fff'; ctx.font='bold 6px sans-serif'; ctx.textAlign='center';
-      ctx.fillText('e⁻',px,py+2);
+      ctx.strokeStyle='#1d4ed8'; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.font='bold 7px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('e⁻',px,py+2.5);
     }
 
-    // 원자 그리기
+    // 원자 그리기 — 격자 점만 표시 (Si 라벨 없음), 양공 자리만 강조
     for(let r=0;r<rows;r++){
       for(let c=0;c<cols;c++){
         const ax=padX+c*sx, ay=padY+r*sy;
         const isHole=(r===holeRow && c===holeCol);
-        const isNext=(voltage>0 && r===holeRow && c===nextCol && hopT>0.1);
 
-        // 양공 자리: 점선 원
         if(isHole){
+          // 양공: 점선 원 + + 기호
           ctx.beginPath(); ctx.arc(ax,ay,ATOM_R+3,0,Math.PI*2);
           ctx.setLineDash([3,3]);
           ctx.strokeStyle='#f97316'; ctx.lineWidth=2; ctx.stroke();
           ctx.setLineDash([]);
           ctx.beginPath(); ctx.arc(ax,ay,ATOM_R+3,0,Math.PI*2);
           ctx.fillStyle='rgba(255,237,213,0.6)'; ctx.fill();
-          ctx.fillStyle='#c2410c'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
-          ctx.fillText('+',ax,ay+4);
-          // 양공 레이블
+          ctx.fillStyle='#c2410c'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
+          ctx.fillText('+',ax,ay+5);
           ctx.fillStyle='#ea580c'; ctx.font='bold 9px Noto Sans KR,sans-serif';
           ctx.fillText('양공',ax,ay-ATOM_R-7);
-          continue;
+        } else {
+          // 일반 격자 자리: 작은 원 (라벨 없음)
+          ctx.beginPath(); ctx.arc(ax,ay,ATOM_R,0,Math.PI*2);
+          ctx.fillStyle='#2d1f5e'; ctx.fill();
+          ctx.strokeStyle='#7c3aed'; ctx.lineWidth=1.5; ctx.stroke();
         }
-
-        ctx.beginPath(); ctx.arc(ax,ay,ATOM_R,0,Math.PI*2);
-        ctx.fillStyle='#ede9fe'; ctx.fill();
-        ctx.strokeStyle='#7c3aed'; ctx.lineWidth=1.5; ctx.stroke();
-        ctx.fillStyle='#5b21b6'; ctx.font='bold 7px sans-serif'; ctx.textAlign='center';
-        ctx.fillText('Si',ax,ay+2.5);
       }
     }
 
-    // 양공 이동 방향 화살표 (전압>0)
+    // 방향 화살표 (전압>0)
     if(voltage>0){
       const arY=H-22;
+      // 양공: 왼→오 (주황)
       ctx.strokeStyle='#f97316'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(padX,arY); ctx.lineTo(W-padX,arY); ctx.stroke();
-      // 화살촉
+      ctx.beginPath(); ctx.moveTo(padX,arY); ctx.lineTo(W/2-10,arY); ctx.stroke();
       ctx.fillStyle='#f97316';
-      ctx.beginPath(); ctx.moveTo(W-padX,arY); ctx.lineTo(W-padX-8,arY-4); ctx.lineTo(W-padX-8,arY+4); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#ea580c'; ctx.font='11px Noto Sans KR,sans-serif'; ctx.textAlign='center';
-      ctx.fillText('양공 이동 →', W/2, arY-4);
+      ctx.beginPath(); ctx.moveTo(W/2-10,arY); ctx.lineTo(W/2-18,arY-4); ctx.lineTo(W/2-18,arY+4); ctx.closePath(); ctx.fill();
+      ctx.font='10px Noto Sans KR,sans-serif'; ctx.textAlign='left';
+      ctx.fillText('양공→',padX+4,arY-5);
+
+      // 전자: 오→왼 (파랑)
+      ctx.strokeStyle='#3b82f6'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(W/2+10,arY); ctx.lineTo(W-padX,arY); ctx.stroke();
+      ctx.fillStyle='#3b82f6';
+      ctx.beginPath(); ctx.moveTo(W/2+10,arY); ctx.lineTo(W/2+18,arY-4); ctx.lineTo(W/2+18,arY+4); ctx.closePath(); ctx.fill();
+      ctx.textAlign='right';
+      ctx.fillText('←전자',W-padX-4,arY-5);
     }
 
     animMap['ptype']=requestAnimationFrame(loop);
@@ -702,14 +710,21 @@ function drawLattice(canvasId, type){
   // ── p형: 양공 ──
   if(type==='ptype'){
     const sp=atoms[specialIdx];
-    const hx=sp.x+38, hy=sp.y-30;
-    ctx.beginPath(); ctx.arc(hx,hy,9,0,Math.PI*2);
-    ctx.fillStyle='#fff'; ctx.fill();
-    ctx.strokeStyle='#f97316'; ctx.lineWidth=2.5; ctx.stroke();
-    ctx.fillStyle='#c2410c'; ctx.font='bold 10px sans-serif'; ctx.textAlign='center';
+    // B 왼쪽 결합선 중간 위치에 양공 표시 (격자 안에 자연스럽게)
+    const leftAtom=atoms[specialIdx-1]; // B 바로 왼쪽 Si
+    // B 원자 표면에서 ATOM_R+11만큼 왼쪽 — 결합선 위의 전자 점들과 같은 간격
+    const hx=sp.x-(22+11), hy=sp.y;
+    // 점선 원 (양공)
+    ctx.beginPath(); ctx.arc(hx,hy,11,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,237,213,0.7)'; ctx.fill();
+    ctx.setLineDash([3,3]);
+    ctx.strokeStyle='#f97316'; ctx.lineWidth=2; ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#c2410c'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
     ctx.fillText('+',hx,hy+4);
-    ctx.strokeStyle='#f97316'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(sp.x+22,sp.y-16); ctx.lineTo(hx-10,hy+4); ctx.stroke();
+    // 양공 레이블
+    ctx.fillStyle='#ea580c'; ctx.font='bold 9px Noto Sans KR,sans-serif';
+    ctx.fillText('양공',hx,hy-15);
 
     ctx.fillStyle='#6d28d9'; ctx.font='bold 11px Noto Sans KR,sans-serif'; ctx.textAlign='center';
     ctx.fillText('전자 부족 → 양공(hole) 형성',W/2,H-12);
